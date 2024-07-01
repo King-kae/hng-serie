@@ -1,32 +1,49 @@
 import express from 'express'
-import geoip from "geoip-lite"
+import axios from 'axios';
 import ip from "ip"
-import bodyParser from 'body-parser'
+import dotenv from "dotenv";
+dotenv.config();
+
+
+
 const app = express()
 const PORT = 3000
+const API_KEY = process.env.API_KEY
+
+
+
 app.use(express.json())
-app.use(bodyParser.json())
 app.set('trust proxy', true)
 
-app.get('/', (req, res) => {
-    // const clientIp = req.socket.remoteAddress;
-    const clientIp = ip.address();
-    const geo = geoip.lookup(clientIp);
-    const myIp = "207.97.227.239"
-    const geo2 = geoip.lookup(myIp)
-    console.log(clientIp)
-    console.log(geo)
-    console.log(geo2.city)
-    res.status(200).send({
-        
-        client_ip: clientIp,
-        location: `${geo}`,
-        location2: `${geo2.city}`,
-        greeting: `Hello, ${req.query.visitor_name}!`
-    })
+
+app.get('/api/hello', async (req, res) => {
+    try {
+        const visitorName = req.query.visitor_name || 'Guest';
+        const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const clientIp2 = ip.address();
+        const geoResponse = await axios.get(` http://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${clientIp}`);
+        const location = geoResponse.data.location.tz_id || 'Unknown';
+        const temperature = geoResponse.data.current.temp_c;
+        const realLocation = location.split("/")[1] 
+
+        const greeting = `Hello, ${visitorName}! The temperature is ${temperature} degrees Celsius in ${realLocation}`;
+
+
+        // console.log(geoResponse.data)
+        res.json({
+            client_ip: clientIp,
+            location: realLocation,
+            greeting: greeting
+        });
+    } catch (err) {
+        res.status(500).send({
+            message: err.message
+        })
+    }
 })
 
-  
+
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`)
 })
+
