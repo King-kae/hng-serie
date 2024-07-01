@@ -20,8 +20,9 @@ app.get('/api/hello', async (req, res) => {
     try {
         const visitorName = req.query.visitor_name || 'Guest';
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        const clientIp2 = ip.address();
-        const geoResponse = await axios.get(` http://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${clientIp2}`);
+        const clientIp2 = await axios.get(`https://api-bdc.net/data/client-ip`);
+        const ipAddress = clientIp2.data.ipString
+        const geoResponse = await axios.get(`http://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${ipAddress}`);
         const location = geoResponse.data.location.tz_id || 'Unknown';
         const temperature = geoResponse.data.current.temp_c;
         const realLocation = location.split("/")[1] 
@@ -29,9 +30,9 @@ app.get('/api/hello', async (req, res) => {
         const greeting = `Hello, ${visitorName}! The temperature is ${temperature} degrees Celsius in ${realLocation}`;
 
 
-        // console.log(geoResponse.data)
+        // return console.log(clientIp2.data.ipString)
         res.json({
-            client_ip: clientIp2,
+            client_ip: ipAddress,
             location: realLocation,
             greeting: greeting
         });
